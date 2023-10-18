@@ -54,10 +54,14 @@ pub fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 	allocator::init_heap(&mut mapper, &mut frame_allocator)
 		.expect("heap initialization failed");
-
+    
 	
 	#[cfg(test)]
 	test_main();
+
+    // Test PCI scan
+    use cogwheel::pci;
+    pci::scan_pci();
 
     let mut executor = Executor::new();
     executor.spawn(Task::new(example_task()));
