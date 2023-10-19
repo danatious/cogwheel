@@ -14,9 +14,17 @@ fn pci_config_read_word(bus: u8, slot: u8, func: u8, offset: u8) -> u16 {
     }
 }
 
-fn pci_check_vendor(bus: u8, slot: u8, func: u8) -> u16 {
-    let vendor_id: u16 = pci_config_read_word(bus, slot, func, 0);
-    vendor_id
+fn pci_check_vendor(bus: u8, slot: u8) -> u16 {
+    let vendor: u16;
+    let device: u16;
+
+    vendor = pci_config_read_word(bus, slot, 0, 0);
+    if vendor != 0xffff {
+        device = pci_config_read_word(bus, slot, 0, 2);
+        println!("Found device {} vendor {} at bus {} device {}", device, vendor, bus, slot);
+    }
+
+    vendor
 }
 
 fn check_function(bus: u8, device: u8, func: &mut u8) {
@@ -30,6 +38,8 @@ fn check_function(bus: u8, device: u8, func: &mut u8) {
         secondary_bus = get_secondary_bus(bus, device, *func);
         check_all_functions(secondary_bus);
     }
+
+    println!("Found function {} at bus {} device {} - base class {} sub class {}", *func, bus, device, base_class, sub_class);
 }
 
 fn check_all_functions(bus: u8) {
@@ -42,7 +52,7 @@ fn get_base_class(bus: u8, device: u8, func: u8) -> u8 {
     let class: u8;
     let vendor_id: u16;
 
-    vendor_id = pci_check_vendor(bus, device, func);
+    vendor_id = pci_check_vendor(bus, device);
     if vendor_id == 0xffff {
         return 0xff;
     }
@@ -54,7 +64,7 @@ fn get_base_class(bus: u8, device: u8, func: u8) -> u8 {
 fn get_sub_class(bus: u8, device: u8, func: u8) -> u8 {
     let vendor_id: u16;
 
-    vendor_id = pci_check_vendor(bus, device, func);
+    vendor_id = pci_check_vendor(bus, device);
     if vendor_id == 0xffff {
         return 0xff;
     }
@@ -66,7 +76,7 @@ fn get_secondary_bus(bus: u8, device: u8, func: u8) -> u8 {
     let secondary_bus: u8;
     let vendor_id: u16;
 
-    vendor_id = pci_check_vendor(bus, device, func);
+    vendor_id = pci_check_vendor(bus, device);
     if vendor_id == 0xffff {
         return 0xff;
     }
@@ -78,7 +88,7 @@ fn get_secondary_bus(bus: u8, device: u8, func: u8) -> u8 {
 fn check_device(bus: u8, device: u8) {
     let mut func = 0;
 
-    let vendor_id = pci_check_vendor(bus, device, func);
+    let vendor_id = pci_check_vendor(bus, device);
     if vendor_id == 0xffff {
         return;
     }
@@ -87,7 +97,7 @@ fn check_device(bus: u8, device: u8) {
     let header_type = pci_config_read_word(bus, device, func, 0x0e) as u8;
     if (header_type & 0x80) != 0 {
         for mut func in 1..8 {
-            let vendor_id = pci_check_vendor(bus, device, func);
+            let vendor_id = pci_check_vendor(bus, device);
             if vendor_id != 0xffff {
                 check_function(bus, device, &mut func);
             }
